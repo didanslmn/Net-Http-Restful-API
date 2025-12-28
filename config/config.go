@@ -7,14 +7,17 @@ import (
 )
 
 type Config struct {
-	App   AppConfig
-	DB    DBConfig
-	JWT   JWTConfig
-	Redis RedisConfig
+	Server ServerConfig
+	DB     DBConfig
+	JWT    JWTConfig
+	Redis  RedisConfig
 }
 
-type AppConfig struct {
-	Port string
+type ServerConfig struct {
+	Port         string
+	Host         string
+	ReadTimeout  time.Duration
+	WriteTimeout time.Duration
 }
 
 type DBConfig struct {
@@ -45,8 +48,11 @@ type RedisConfig struct {
 
 func LoadConfig() (*Config, error) {
 	return &Config{
-		App: AppConfig{
-			Port: getEnv("APP_PORT", "8080"),
+		Server: ServerConfig{
+			Port:         getEnv("SERVER_PORT", "8080"),
+			Host:         getEnv("SERVER_HOST", "localhost"),
+			ReadTimeout:  getEnvAsDuration("SERVER_READ_TIMEOUT", 15*time.Second),
+			WriteTimeout: getEnvAsDuration("SERVER_WRITE_TIMEOUT", 15*time.Second),
 		},
 		// Database configuration
 		DB: DBConfig{
@@ -55,7 +61,7 @@ func LoadConfig() (*Config, error) {
 			DBName:   getEnv("DB_NAME", "postgres"),
 			User:     getEnv("DB_USER", "postgres"),
 			Password: getEnv("DB_PASSWORD", "postgres"),
-			SSLMode:  getEnv("DB_SSL_MODE", "require"),
+			SSLMode:  getEnv("DB_SSL_MODE", "disable"),
 		},
 		// JWT configuration
 		JWT: JWTConfig{

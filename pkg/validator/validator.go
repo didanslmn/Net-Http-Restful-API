@@ -38,9 +38,9 @@ func GetValidator() *validator.Validate {
 }
 
 // ValidateStruct validates a struct and returns AppError with details
-func ValidateStruct(s interface{}) error {
+func ValidateStruct(data interface{}) error {
 	v := GetValidator()
-	err := v.Struct(s)
+	err := v.Struct(data)
 	if err == nil {
 		return nil
 	}

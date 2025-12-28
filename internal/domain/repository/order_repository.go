@@ -12,9 +12,9 @@ type OrderRepository interface {
 	Create(ctx context.Context, order *entities.Order) error
 	GetByID(ctx context.Context, id uuid.UUID) (*entities.Order, error)
 	GetByIDWithItems(ctx context.Context, id uuid.UUID) (*entities.Order, error)
-	GetByCustomerID(ctx context.Context, customerID uuid.UUID, limit, page int, status string) ([]*entities.Order, int64, error)
+	GetByCustomerID(ctx context.Context, customerID uuid.UUID, limit, offset int, status string) ([]*entities.Order, int64, error)
 	UpdateStatus(ctx context.Context, id uuid.UUID, newStatus entities.OrderStatus) error
 	CreateOrderItem(ctx context.Context, item *entities.OrderItem) error
 	GetOrderItemsByOrderID(ctx context.Context, orderID uuid.UUID) ([]entities.OrderItem, error)
-	ListAll(ctx context.Context, limit, page int, status string) ([]*entities.Order, int64, error)
+	ListAll(ctx context.Context, limit, offset int, status string) ([]*entities.Order, int64, error)
 }

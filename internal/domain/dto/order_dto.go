@@ -2,6 +2,9 @@ package dto
 
 import (
 	"postgresDB/internal/domain/entities"
+	"time"
+
+	"github.com/google/uuid"
 )
 
 type CreateOrderRequest struct {
@@ -10,32 +13,32 @@ type CreateOrderRequest struct {
 	Metadata   map[string]string  `json:"metadata" validate:"omitempty"`
 }
 type OrderItemRequest struct {
-	ProductID string `json:"product_id" validate:"required,uuid4"`
-	Quantity  int    `json:"quantity" validate:"required,min=1"`
+	ProductID uuid.UUID `json:"product_id" validate:"required,uuid4"`
+	Quantity  int       `json:"quantity" validate:"required,min=1"`
 }
 
 // UpdateOrderRequest represents the payload for updating an existing order
 type UpdateOrderRequest struct {
-	Status *string `json:"status" validate:"omitempty,oneof=pending completed cancelled"`
+	Status string `json:"status" validate:"omitempty,oneof=pending completed cancelled"`
 }
 
 type OrderResponse struct {
-	ID          string              `json:"id"`
-	CustomerID  string              `json:"customer_id"`
+	ID          uuid.UUID           `json:"id"`
+	CustomerID  uuid.UUID           `json:"customer_id"`
 	Status      string              `json:"status"`
 	TotalAmount float64             `json:"total_amount"`
 	Items       []OrderItemResponse `json:"items"`
-	CreatedAt   string              `json:"created_at"`
-	UpdatedAt   string              `json:"updated_at"`
+	CreatedAt   time.Time           `json:"created_at"`
+	UpdatedAt   time.Time           `json:"updated_at"`
 }
 
 type OrderItemResponse struct {
-	ID        string  `json:"id"`
-	ProductID string  `json:"product_id"`
-	Quantity  int     `json:"quantity"`
-	UnitPrice float64 `json:"unit_price"`
-	SubTotal  float64 `json:"sub_total"`
-	CreatedAt string  `json:"created_at"`
+	ID        uuid.UUID `json:"id"`
+	ProductID uuid.UUID `json:"product_id"`
+	Quantity  int       `json:"quantity"`
+	UnitPrice float64   `json:"unit_price"`
+	SubTotal  float64   `json:"sub_total"`
+	CreatedAt string    `json:"created_at"`
 }
 
 // OrderListRequest represents the query parameters for listing orders
@@ -50,19 +53,18 @@ func ToOrderResponse(o *entities.Order) OrderResponse {
 	items := make([]OrderItemResponse, len(o.Items))
 	for i, item := range o.Items {
 		items[i] = OrderItemResponse{
-			ID:        item.ID.String(),
-			ProductID: item.ProductID.String(),
+			ID:        item.ID,
+			ProductID: item.ProductID,
 			Quantity:  item.Quantity,
 			UnitPrice: item.UnitPrice,
 			SubTotal:  item.SubTotal,
-			CreatedAt: item.CreatedAt,
 		}
 	}
 
 	return OrderResponse{
-		ID:          o.ID.String(),
-		CustomerID:  o.CustomerID.String(),
-		Status:      string(o.Status),
+		ID:          o.ID,
+		CustomerID:  o.CustomerID,
+		Status:      o.Status.String(),
 		TotalAmount: o.TotalAmount,
 		Items:       items,
 		CreatedAt:   o.CreatedAt,

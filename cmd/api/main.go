@@ -3,85 +3,116 @@ package main
 import (
 	"context"
 	"fmt"
-	"log/slog"
+	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"postgresDB/config"
+	"postgresDB/internal/delivery/handler"
+	"postgresDB/internal/delivery/routers"
 	"postgresDB/internal/infrastruktur/cache"
-	"postgresDB/internal/infrastruktur/postgres"
+	"postgresDB/internal/infrastruktur/database"
+	"postgresDB/internal/repository/postgres"
+	"postgresDB/internal/repository/redis"
+	"postgresDB/internal/service"
+	"postgresDB/pkg/jwt"
+	"syscall"
+	"time"
 
 	"github.com/joho/godotenv"
 )
 
 func main() {
-	// Use structured logging
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-
-	// Load .env file. It's better to run the app from the root directory.
-	if err := godotenv.Load("./../../.env"); err != nil {
-		logger.Warn("No .env file found, reading environment variables")
+	if err := godotenv.Load(); err != nil {
+		log.Println("file .env tidak ditemukan")
 	}
 
-	// Load configuration
+	// load configuration
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		logger.Error("Failed to load configuration", "error", err)
-		os.Exit(1)
+		log.Fatalf("load configurasi gagal: %v", err)
 	}
+
 	ctx := context.Background()
-
-	// Initialize database connection
-	db, err := postgres.NewConnection(ctx, cfg.DB)
+	// initial database
+	dbPool, err := database.NewConnection(ctx, cfg.DB)
 	if err != nil {
-		logger.Error("Failed to connect to database", "error", err)
-		os.Exit(1)
+		log.Fatalf("koneksi ke database gagal: %v", err)
 	}
-	defer db.Close()
-	logger.Info("Database connection pool initialized successfully")
+	defer dbPool.Close()
+	log.Println("koneksi ke database berhasil")
 
-	// Initialize redis
+	// initial Redis
 	redisClient, err := cache.NewRedisClient(ctx, cfg.Redis)
 	if err != nil {
-		logger.Error("Failed to connect to redis", "error", err)
-		os.Exit(1)
+		log.Fatalf("koneksi ke Redis gagal: %v", err)
 	}
 	defer redisClient.Close()
-	logger.Info("Redis connection pool initialized successfully")
+	log.Println("koneksi ke Redis berhasil")
 
-	// // Initialize JWT Manager
-	// jwtManager, err := jwt.NewManager(&cfg.JWT)
-	// if err != nil {
-	// 	logger.Error("Failed to initialize JWT manager", "error", err)
-	// 	os.Exit(1)
-	// }
+	// initial repository
+	userRepo := postgres.NewUserRepository(dbPool)
+	productRepo := postgres.NewProductRepository(dbPool)
+	orderRepo := postgres.NewOrderRepository(dbPool)
+	tokenRepo := redis.NewTokenRepository(redisClient)
 
-	// // Initialize Validator
-	// val := validator.NewValidator()
+	// initial JWT service with token repository
+	jwtService, err := jwt.NewService(&cfg.JWT, tokenRepo)
+	if err != nil {
+		log.Fatalf("Failed to initialize jwt service: %v", err)
+	}
+	log.Println("JWT service initialized")
 
-	// // Dependency Injection
-	// // Repository
-	// userRepository := userRepo.NewUserRepository(db)
+	// initialize service
+	authService := service.NewAuthService(userRepo, jwtService)
+	userService := service.NewUserService(userRepo)
+	productService := service.NewProductService(productRepo)
+	orderService := service.NewOrderService(orderRepo, productRepo)
 
-	// // Service
-	// authSvc := service.NewAuthService(userRepository, jwtManager)
-	// userSvc := service.NewUserService(userRepository)
+	// initialize handler
+	authHandler := handler.NewAuthHandler(authService, cfg.JWT.RefreshTokenTTL)
+	userHandler := handler.NewUserHandler(userService)
+	productHandler := handler.NewProductHandler(productService)
+	orderHandler := handler.NewOrderHandler(orderService)
 
-	// // Handler
-	// authHandler := handler.NewAuthHandler(authSvc, val)
-	// userHandler := handler.NewUserHandler(userSvc, val)
+	// initialize router
+	r := routers.NewRouter(
+		authHandler,
+		userHandler,
+		productHandler,
+		orderHandler,
+		jwtService,
+		cfg,
+	)
 
-	// // Router
-	// router := handler.NewRouter(authHandler, userHandler, jwtManager)
-
-	// Start server
+	// setup server
 	server := &http.Server{
-		Addr: fmt.Sprintf(":%s", cfg.App.Port),
-		//Handler: router,
+		Addr:         fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port),
+		Handler:      r.SetupRoutes(),
+		ReadTimeout:  cfg.Server.ReadTimeout,
+		WriteTimeout: cfg.Server.WriteTimeout,
 	}
 
-	logger.Info(fmt.Sprintf("Server starting on port %s", cfg.App.Port))
-	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		logger.Error("Could not start server", "error", err)
-		os.Exit(1)
+	// Start server in goroutine
+	go func() {
+		log.Printf("Server starting on %s:%s", cfg.Server.Host, cfg.Server.Port)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Server failed: %v", err)
+		}
+	}()
+
+	// Graceful shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	log.Println("Shutting down server...")
+
+	shutdownCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		log.Fatalf("Server forced to shutdown: %v", err)
 	}
+
+	log.Println("Server exited gracefully")
 }

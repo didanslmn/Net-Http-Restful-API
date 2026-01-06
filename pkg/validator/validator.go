@@ -33,6 +33,9 @@ func GetValidator() *validator.Validate {
 
 		// Register custom validators
 		_ = validate.RegisterValidation("password", validatePassword)
+		_ = validate.RegisterValidation("strongPassword", validatePassword)
+		_ = validate.RegisterValidation("username", validateUsername)
+		_ = validate.RegisterValidation("customEmail", validateCustomEmail)
 	})
 	return validate
 }
@@ -93,6 +96,17 @@ func validatePassword(fl validator.FieldLevel) bool {
 	return hasUpper && hasLower && hasNumber || hasSpecial
 }
 
+func validateUsername(fl validator.FieldLevel) bool {
+	username := fl.Field().String()
+	usernameRegex := regexp.MustCompile(`^[a-zA-Z0-9_]+$`)
+	return usernameRegex.MatchString(username)
+}
+
+func validateCustomEmail(fl validator.FieldLevel) bool {
+	email := fl.Field().String()
+	return IsValidEmail(email)
+}
+
 // getErrorMessage returns a user-friendly error message in Indonesian
 func getErrorMessage(e validator.FieldError) string {
 	field := e.Field()
@@ -100,7 +114,7 @@ func getErrorMessage(e validator.FieldError) string {
 	switch e.Tag() {
 	case "required":
 		return field + " wajib diisi"
-	case "email":
+	case "email", "customEmail":
 		return "Format email tidak valid"
 	case "min":
 		return field + " minimal " + e.Param() + " karakter"
@@ -116,8 +130,10 @@ func getErrorMessage(e validator.FieldError) string {
 		return field + " harus lebih kecil atau sama dengan " + e.Param()
 	case "oneof":
 		return field + " harus salah satu dari: " + e.Param()
-	case "password":
+	case "password", "strongPassword":
 		return "Password harus minimal 8 karakter dengan huruf besar, huruf kecil, dan angka"
+	case "username":
+		return "Username hanya boleh berisi huruf, angka, dan underscore"
 	case "uuid":
 		return field + " harus berformat UUID yang valid"
 	default:

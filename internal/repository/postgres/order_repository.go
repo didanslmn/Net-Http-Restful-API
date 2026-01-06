@@ -50,7 +50,7 @@ func (r *orderRepository) Create(ctx context.Context, order *entities.Order) err
 	}
 	// Insert order items
 	itemQuery := `
-		INSERT INTO order_items (id, order_id, product_id, quantity, unit_price,sub_total, created_at)
+		INSERT INTO order_items (id, order_id, product_id, quantity, unit_price, subtotal, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
 	for _, item := range order.Items {
@@ -245,7 +245,7 @@ func (r *orderRepository) UpdateStatus(ctx context.Context, id uuid.UUID, newSta
 // CreateOrderItem buat item pesanan baru
 func (r *orderRepository) CreateOrderItem(ctx context.Context, item *entities.OrderItem) error {
 	query := `
-		INSERT INTO order_items (id, order_id, product_id, quantity, unit_price, created_at, updated_at)
+		INSERT INTO order_items (id, order_id, product_id, quantity, unit_price, subtotal, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
 
@@ -267,7 +267,7 @@ func (r *orderRepository) CreateOrderItem(ctx context.Context, item *entities.Or
 
 // GetOrderItemsByOrderID mengambil item pesanan berdasarkan ID pesanan
 func (r *orderRepository) GetOrderItemsByOrderID(ctx context.Context, orderID uuid.UUID) ([]entities.OrderItem, error) {
-	query := `SELECT id, order_id, product_id, quantity, unit_price, created_at, updated_at FROM order_items WHERE order_id = $1 ORDER BY created_at`
+	query := `SELECT id, order_id, product_id, quantity, unit_price, subtotal, created_at FROM order_items WHERE order_id = $1 ORDER BY created_at`
 
 	rows, err := r.db.Query(ctx, query, orderID)
 	if err != nil {

@@ -16,6 +16,7 @@ import (
 	"postgresDB/internal/repository/redis"
 	"postgresDB/internal/service"
 	"postgresDB/pkg/jwt"
+	"postgresDB/pkg/logger"
 	"syscall"
 	"time"
 
@@ -26,6 +27,10 @@ func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Println("file .env tidak ditemukan")
 	}
+
+	// Initialize Logger
+	logger.Init(os.Getenv("APP_ENV"))
+	logger.Info("Starting application...")
 
 	// load configuration
 	cfg, err := config.LoadConfig()

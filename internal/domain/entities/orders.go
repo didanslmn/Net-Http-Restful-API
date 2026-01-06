@@ -69,7 +69,7 @@ type OrderItem struct {
 	OrderID   uuid.UUID `db:"order_id"`
 	ProductID uuid.UUID `db:"product_id"`
 	Quantity  int       `db:"quantity"`
-	UnitPrice float64   `db:"price"`
-	SubTotal  float64   `db:"sub_total"`
+	UnitPrice float64   `db:"unit_price"`
+	SubTotal  float64   `db:"subtotal"`
 	CreatedAt time.Time `db:"created_at"`
 }

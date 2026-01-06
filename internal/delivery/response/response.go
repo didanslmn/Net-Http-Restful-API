@@ -6,6 +6,7 @@ import (
 
 	"postgresDB/internal/domain/dto"
 	apperrors "postgresDB/internal/domain/errors"
+	"postgresDB/pkg/logger"
 )
 
 // JSON writes a JSON response
@@ -61,6 +62,17 @@ func Error(w http.ResponseWriter, err error) {
 	}
 
 	resp := dto.NewErrorResponse(string(appErr.Code), appErr.Message, details)
+
+	// Log internal errors for debugging
+	if appErr.Code == apperrors.CodeInternal {
+		if appErr.Err != nil {
+			logger.Error("Internal server error occurred",
+				"error", appErr.Err.Error(),
+				"http_status", appErr.HTTPStatus,
+			)
+		}
+	}
+
 	JSON(w, appErr.HTTPStatus, resp)
 }
 

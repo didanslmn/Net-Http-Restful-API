@@ -117,6 +117,16 @@ func (s *orderService) ListAll(ctx context.Context, UserID uuid.UUID, requesterR
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// Populate items for each order
+	// for _, order := range orders {
+	// 	items, err := s.orderRepo.GetOrderItemsByOrderID(ctx, order.ID)
+	// 	if err != nil {
+	// 		return nil, nil, err
+	// 	}
+	// 	order.Items = items
+	// }
+
 	responseList := dto.ToOrderResponseList(orders)
 	pagination := &dto.PaginationMeta{
 		Total:      total,

@@ -8,9 +8,7 @@ import (
 )
 
 type CreateOrderRequest struct {
-	CustomerID string             `json:"customer_id" validate:"required,uuid4"`
-	Items      []OrderItemRequest `json:"items" validate:"required,dive,required"`
-	Metadata   map[string]string  `json:"metadata" validate:"omitempty"`
+	Items []OrderItemRequest `json:"items" validate:"required,dive,required"`
 }
 type OrderItemRequest struct {
 	ProductID uuid.UUID `json:"product_id" validate:"required,uuid4"`

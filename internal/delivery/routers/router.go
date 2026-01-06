@@ -82,7 +82,7 @@ func (r *Router) SetupRoutes() http.Handler {
 	r.mux.Handle("POST /api/v1/orders", r.withAuthAndRole(http.HandlerFunc(r.orderHandler.CreateOrder), entities.RoleUser))
 	r.mux.Handle("PATCH /api/v1/orders/{id}/status", r.withAuthAndRole(http.HandlerFunc(r.orderHandler.UpdateOrderStatus), entities.RoleAdmin))
 
-	return nil
+	return middleware.Logger(r.mux)
 }
 
 // withAuthMiddleware applies authentication middleware to protected routes

@@ -11,7 +11,7 @@ type Role string
 
 const (
 	RoleAdmin Role = "admin"
-	RoleUser  Role = "user"
+	RoleUser  Role = "customer"
 )
 
 // User represents a user entity in the system
